@@ -17,16 +17,11 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import scanpy as sc
 import warnings
-from Extenrnal.sc_DM.inpaint.analysis.result_analysis import get_N_clusters
-
-from Extenrnal.sc_DM.inpaint.diffusion.dit.DiT_model import DiT_Palette
-from Extenrnal.sc_DM.inpaint.diffusion.dit.DiT_scheduler import NoiseScheduler
-from Extenrnal.sc_DM.inpaint.diffusion.dit.DiT_train import normal_train_palette
-from Extenrnal.sc_DM.inpaint.diffusion.sample_new import sample_loop_palette
-from diffusion.result_analysis import clustering_metrics
-
-warnings.filterwarnings('ignore')
-
+import time
+import sys
+import tangram as tg
+from os.path import join
+from IPython.display import display
 from scipy.stats import spearmanr, pearsonr
 from scipy.spatial import distance_matrix
 from sklearn.metrics import matthews_corrcoef
@@ -35,24 +30,22 @@ import seaborn as sns
 import torch
 from scipy.spatial.distance import cdist
 import h5py
-from scipy.stats import spearmanr
+warnings.filterwarnings('ignore')
 
-import time
-import sys
-import tangram as tg
-from os.path import join
-from IPython.display import display
-from Extenrnal.scvi.model import GIMVI
-from Extenrnal.stPlus import *
-from diffusion.data import *
-path = '/home/lkm/benchmark/Result/FigureData/Figure2/'
+from process.result_analysis import *
+from.model.dit.DiT_model import DiT_stDiff
+from model.dit.DiT_scheduler import NoiseScheduler
+from model.dit.DiT_train import normal_train_stDiff
+from model.sample import sample_stDiff
+from baseline.scvi.model import GIMVI
+from baseline.stPlus import *
+from process.data import *
 
 import argparse
 parser = argparse.ArgumentParser(description='manual to this script')
-parser.add_argument("--sc_data", type=str, default="dataset11_seq_141.h5ad")
-parser.add_argument("--sp_data", type=str, default='dataset11_spatial_141.h5ad')
-parser.add_argument("--document", type=str, default='dataset11_std+scale')
-parser.add_argument("--noise_std", type=float, default=0.1)
+parser.add_argument("--sc_data", type=str, default="dataset5_seq_915.h5ad")
+parser.add_argument("--sp_data", type=str, default='dataset5_spatial_915.h5ad')
+parser.add_argument("--document", type=str, default='dataset5')
 args = parser.parse_args()
 # ******** preprocess ********
 
@@ -61,30 +54,23 @@ args = parser.parse_args()
 n_splits = 5 # 交叉验证组数
 adata_spatial = sc.read_h5ad('datasets/sp/' + args.sp_data)
 adata_seq = sc.read_h5ad('datasets/sc/' + args.sc_data)
-# sc_max = np.max(adata_seq.X)
+
 # 标准预处理
 adata_seq2 = adata_seq.copy()
-# adata_seq2 = data_augment(adata_seq.copy(), args.noise_std)
-# adata_seq2 = data_augment(adata_seq.copy(), noise_std= sc_max / 5000)
 # tangram用
 adata_seq3 =  adata_seq2.copy()
-
-adata_spatial2 = adata_spatial.copy()
-
 sc.pp.normalize_total(adata_seq2, target_sum=1e4)
 sc.pp.log1p(adata_seq2)
 data_seq_array = adata_seq2.X
-# CellTypeAnnotate = adata_seq2.obs['subclass_id']
 
-# sc.pp.normalize_total(adata_spatial2, target_sum=1e4)
-# sc.pp.log1p(adata_spatial2)
+adata_spatial2 = adata_spatial.copy()
+sc.pp.normalize_total(adata_spatial2, target_sum=1e4)
+sc.pp.log1p(adata_spatial2)
 data_spatial_array = adata_spatial2.X
 
 sp_genes = np.array(adata_spatial.var_names)
 sp_data = pd.DataFrame(data=data_spatial_array, columns=sp_genes)
 sc_data = pd.DataFrame(data=data_seq_array, columns=sp_genes)
-
- 
 
 # ****对比方法****
 
@@ -96,7 +82,7 @@ def SpaGE_impute():
 
     '''
     print ('We run SpaGE for this data\n')
-    sys.path.append("Extenrnal/SpaGE-master/")
+    sys.path.append("baseline/SpaGE-master/")
     from SpaGE.main import SpaGE
     global sc_data, sp_data, adata_seq, adata_spatial
 
@@ -133,7 +119,7 @@ def Tangram_impute(annotate=None, modes='clusters', density='rna_count_based'):
     '''
     import torch
     from torch.nn.functional import softmax, cosine_similarity, sigmoid
-    import Extenrnal.tangram as tg
+    import baseline.tangram as tg
     print('We run Tangram for this data\n')
     global adata_seq3, adata_spatial, locations
     from sklearn.model_selection import KFold
@@ -174,7 +160,7 @@ def Tangram_impute(annotate=None, modes='clusters', density='rna_count_based'):
             adata_seq_tmp.obs['leiden'] = CellTypeAnnotate
         tg.pp_adatas(adata_seq_tmp, adata_spatial_partial, genes=train_gene) 
 
-        device = torch.device('cuda:0')
+        device = torch.device('cuda:1')
         if modes == 'clusters':
             ad_map = tg.map_cells_to_space(adata_seq_tmp, adata_spatial_partial, device=device, mode=modes,
                                            cluster_label='leiden', density_prior=density)
@@ -202,7 +188,7 @@ def gimVI_impute():
 
     '''
     print ('We run gimVI for this data\n')
-    import Extenrnal.scvi as scvi
+    import baseline.scvi as scvi
     import scanpy as sc
     # from scvi.model import GIMVI
     import torch
@@ -276,167 +262,28 @@ def stPlus_impute():
     return all_pred_res
 
 
-def diffusion_impute():
-    '''
-    如果是标准预处理 则需要scale一下
-    Returns
-    -------
-
-    '''
-    lr = 1e-4 # 0.000300627993469235
-    depth = 6 # 9
-    num_epoch = 600
-    diffusion_step = 1000 # 500
-    batch_size = 512 # 1536
-    hidden_size = 512
-    
-    raw_shared_gene = adata_spatial.var_names
-    kf = KFold(n_splits=n_splits, shuffle=True, random_state=0)  # shuffle = false 不设置state，就是按顺序划分
-    kf.get_n_splits(raw_shared_gene)
-    torch.manual_seed(10)
-    idx = 1
-    all_pred_res = np.zeros_like(data_spatial_array)
-
-    for train_ind, test_ind in kf.split(raw_shared_gene):
-        print("\n===== Fold %d =====\nNumber of train genes: %d, Number of test genes: %d" % (
-            idx, len(train_ind), len(test_ind)))
-
-        save_path_prefix = 'inpaint/ckpt/palette/dit/42-fold%d.pt' % (idx)
-        # mask
-        cell_num = data_spatial_array.shape[0]
-        gene_num = data_spatial_array.shape[1]
-        mask = np.ones((gene_num,), dtype='float32')
-        gene_ids_test = test_ind
-        mask[gene_ids_test] = 0
-
-        # 如果是标准与处理 则需要有scale
-        scaler = MaxAbsScaler()
-        # 对adata.X按行进行归一化
-        seq = scaler.fit_transform(data_seq_array.T).T
-        st = scaler.fit_transform(data_spatial_array.T).T
-
-        # seq = data_seq_array
-        # st = data_spatial_array
-        data_seq_masked = seq * mask
-        data_spatial_masked = st * mask
-
-        seq = seq * 2 - 1
-        data_seq_masked = data_seq_masked * 2 - 1
-
-        data_ary = data_spatial_array
-        st = st * 2 - 1
-        data_spatial_masked = data_spatial_masked * 2 - 1
-
-        dataloader = get_data_loader(
-            seq,
-            data_seq_masked,
-            batch_size=batch_size,  # 原2048  ssp 1024  d3 1024  994 512
-            is_shuffle=True)
-
-        seed = 1202
-        torch.manual_seed(seed)
-        torch.cuda.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
-
-        model = DiT_Palette(
-            input_size=gene_num,  # 158  33   994       169
-            hidden_size=hidden_size,  # 512      1024       512
-            depth=depth,
-            num_heads=16,
-            classes=6,  # 16   6
-            mlp_ratio=4.0,
-            dit_type='dit'
-        )
-
-        device = torch.device('cuda:0')
-        model.to(device)
-
-        diffusion_step = diffusion_step
-
-        parameters = {'lr': lr, 'momentum': 0.7779814458926817,  # lr0.09886909388175943
-                      'batch_size': batch_size}  # 最早都是1024  994 768
-
-
-        model.train()
-
-        if not os.path.isfile(save_path_prefix):
-
-            normal_train_palette(model,
-                                 dataloader=dataloader,
-                                 lr=lr,
-                                 num_epoch=num_epoch,
-                                 diffusion_step=diffusion_step,
-                                 device=device,
-                                 pred_type='noise',
-                                 mask=mask)
-
-            # torch.save(model.state_dict(), save_path_prefix)
-        else:
-            model.load_state_dict(torch.load(save_path_prefix))
-
-        gt = data_spatial_masked
-        noise_scheduler = NoiseScheduler(
-            num_timesteps=diffusion_step,
-            beta_schedule='cosine'
-        )
-
-        dataloader = get_data_loader(
-            data_spatial_masked,
-            data_spatial_masked,
-            batch_size=batch_size,  # 33 1024    994 512
-            is_shuffle=False)
-
-        # sample
-
-        # %%
-        model.eval()
-        imputation = sample_loop_palette(model,
-                                         device=device,
-                                         dataloader=dataloader,
-                                         noise_scheduler=noise_scheduler,
-                                         mask=mask,
-                                         gt=gt,
-                                         num_step=diffusion_step,
-                                         sample_shape=(cell_num, gene_num),
-                                         is_condi=True,
-                                         sample_intermediate=diffusion_step,
-                                         model_pred_type='noise',
-                                         is_classifier_guidance=False,
-                                         omega=0.2)
-
-        all_pred_res[:, gene_ids_test] = imputation[:, gene_ids_test]
-        idx += 1
-
-    impu = (all_pred_res + 1) / 2
-    cpy_x = adata_spatial.copy()
-    cpy_x.X = impu
-    return impu
-
-
-# 如果可以运行 最后需要将结果输出csv
 Data = args.document
-outdir = 'Result/FigureData/Figure2/' + Data + '/'
+outdir = 'Result/' + Data + '/'
 if not os.path.exists(outdir):
     os.mkdir(outdir)
 
 
-# SpaGE_result = SpaGE_impute() # ok
-# SpaGE_result_pd = pd.DataFrame(SpaGE_result, columns=sp_genes)
-# SpaGE_result_pd.to_csv(outdir +  '/SpaGE_impute.csv',header = 1, index = 1)
+SpaGE_result = SpaGE_impute() 
+SpaGE_result_pd = pd.DataFrame(SpaGE_result, columns=sp_genes)
+SpaGE_result_pd.to_csv(outdir +  '/SpaGE_impute.csv',header = 1, index = 1)
 
-# Tangram_result = Tangram_impute() # ok
-# Tangram_result_pd = pd.DataFrame(Tangram_result, columns=sp_genes)
-# Tangram_result_pd.to_csv(outdir +  '/Tangram_impute.csv',header = 1, index = 1)
+Tangram_result = Tangram_impute() 
+Tangram_result_pd = pd.DataFrame(Tangram_result, columns=sp_genes)
+Tangram_result_pd.to_csv(outdir +  '/Tangram_impute.csv',header = 1, index = 1)
+
+gimVI_result = gimVI_impute() 
+gimVI_result_pd = pd.DataFrame(gimVI_result, columns=sp_genes)
+gimVI_result_pd.to_csv(outdir +  '/gimVI_impute.csv',header = 1, index = 1)
 
 
-# gimVI_result = gimVI_impute() # ok
-# gimVI_result_pd = pd.DataFrame(gimVI_result, columns=sp_genes)
-# gimVI_result_pd.to_csv(outdir +  '/gimVI_impute.csv',header = 1, index = 1)
-
-
-# stPlus_result = stPlus_impute() # ok
-# stPlus_result_pd = pd.DataFrame(stPlus_result, columns=sp_genes)
-# stPlus_result_pd.to_csv(outdir +  '/stPlus_impute.csv',header = 1, index = 1)
+stPlus_result = stPlus_impute() 
+stPlus_result_pd = pd.DataFrame(stPlus_result, columns=sp_genes)
+stPlus_result_pd.to_csv(outdir +  '/stPlus_impute.csv',header = 1, index = 1)
 
 #******** metrics ********
 
@@ -533,24 +380,6 @@ class CalculateMeteics:
 
                 ssim_df = pd.DataFrame(ssim, index=["SSIM"], columns=[label])
                 result = pd.concat([result, ssim_df], axis=1)
-        else:
-            print("columns error")
-        return result
-
-    def PCC(self, raw, impute, scale=None):
-        if raw.shape[0] == impute.shape[0]:
-            result = pd.DataFrame()
-            for label in raw.columns:
-                if label not in impute.columns:
-                    pearsonr = 0
-                else:
-                    raw_col = raw.loc[:, label]
-                    impute_col = impute.loc[:, label]
-                    impute_col = impute_col.fillna(1e-20)
-                    raw_col = raw_col.fillna(1e-20)
-                    pearsonr, _ = st.pearsonr(raw_col, impute_col)
-                pearson_df = pd.DataFrame(pearsonr, index=["PCC"], columns=[label])
-                result = pd.concat([result, pearson_df], axis=1)
         else:
             print("columns error")
         return result
@@ -656,17 +485,6 @@ class CalculateMeteics:
         # nmi = clustering_metrics(tmp_adata2, 'class', 'leiden', "NMI")
         
         result = pd.DataFrame([[ari, ami, homo, nmi]], columns=["ARI", "AMI", "Homo", "NMI"])
-
-        # # batch
-        # ad_sp.obs['leiden'] = tmp_adata1.obs['leiden']
-        # ad_sp.obs['batch'] = 'origin'
-        # ad_sp.obs['batch'] = ad_sp.obs['batch'].astype('category')
-        # cpy_x.obs['leiden'] = tmp_adata2.obs['leiden']
-        # cpy_x.obs['batch'] = 'impu'
-        # cpy_x.obs['batch'] = cpy_x.obs['batch'].astype('category')
-        # merge_adata = ad.concat([ad_sp, cpy_x])
-        # plot_hvg_umap(merge_adata, color=['batch', 'leiden'], save_filename='Result/cluster')
-
         return result
 
     def compute_all(self):
@@ -679,36 +497,25 @@ class CalculateMeteics:
         JS_gene = self.JS(raw, impute)
         RMSE_gene = self.RMSE(raw, impute)
 
-        SSIM_cell = self.SSIM(raw.T, impute.T)
-        Pearson_cell = self.PCC(raw.T, impute.T)
-        Spearman_cell = self.SPCC(raw.T, impute.T)
-        JS_cell = self.JS(raw.T, impute.T)
-        RMSE_cell = self.RMSE(raw.T, impute.T)
-
         cluster_result = self.cluster(raw, impute)
 
         result_gene = pd.concat([Spearman_gene, Pearson_gene, SSIM_gene, RMSE_gene, JS_gene], axis=0)
         result_gene.T.to_csv(prefix + "_gene_Metrics.txt", sep='\t', header=1, index=1)
 
-        result_cell = pd.concat([Spearman_cell, Pearson_cell, SSIM_cell, RMSE_cell, JS_cell], axis=0)
-        result_cell.T.to_csv(prefix + "_cell_Metrics.txt", sep='\t', header=1, index=1)
-
         cluster_result.to_csv(prefix + "_cluster_Metrics.txt", sep='\t', header=1, index=1)
-        # self.accuracy = result_all
+
         return result_gene
 
 
 import seaborn as sns
 import os
-PATH = 'Result/FigureData/Figure2/'
+PATH = 'Result/'
 DirFiles = os.listdir(PATH)
-CountInsuteDir = 'DataUpload/'
+
 
 def CalDataMetric(Data):
     print ('We are calculating the : ' + Data + '\n')
-    raw_count_file = CountInsuteDir + Data + '/Insitu_count.txt'
-    metrics = ['SPCC(gene)','PCC(gene)','SSIM(gene)','RMSE(gene)','JS(gene)',
-              'SPCC(cell)','PCC(cell)','SSIM(cell)','RMSE(cell)','JS(cell)']
+    metrics = ['SPCC(gene)','PCC(gene)','SSIM(gene)','RMSE(gene)','JS(gene)']
     metric = ['SPCC','PCC','SSIM','RMSE','JS']
     impute_count_dir = PATH + Data
     impute_count = os.listdir(impute_count_dir)
@@ -731,7 +538,7 @@ def CalDataMetric(Data):
 
             # 计算中位数
             median = []
-            for j in ['_gene','_cell']:
+            for j in ['_gene']:
             # j = '_gene'
             #     median = []
                 tmp = pd.read_csv(prefix + j + '_Metrics.txt', sep='\t', index_col=0)
@@ -746,10 +553,6 @@ def CalDataMetric(Data):
         metrics += ["ARI", "AMI", "Homo", "NMI"]
         medians.columns = metrics
         medians.index = methods
-        # medians.index = ['gimVI_gene', 'gimVI_cell', 'Tangram_gene', 'Tangram_cell',
-        #                  'stPlus_gene', 'stPlus_cell','SpaGE_gene', 'SpaGE_cell']
         medians.to_csv(outdir +  '/final_result.csv',header = 1, index = 1)
-
-
 
 CalDataMetric(Data)

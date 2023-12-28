@@ -31,10 +31,10 @@ import tangram as tg
 from os.path import join
 from IPython.display import display
 
-from inpaint.diffusion.dit.DiT_model import DiT_stDiff
-from inpaint.diffusion.dit.DiT_scheduler import NoiseScheduler
-from inpaint.diffusion.dit.DiT_train import normal_train_stDiff
-from inpaint.diffusion.sample import sample_stDiff
+from model.dit.DiT_model import DiT_stDiff
+from model.dit.DiT_scheduler import NoiseScheduler
+from model.dit.DiT_train import normal_train_stDiff
+from model.sample import sample_stDiff
 from process.result_analysis import clustering_metrics
 
 warnings.filterwarnings('ignore')
@@ -44,13 +44,13 @@ from process.data import *
 
 import argparse
 parser = argparse.ArgumentParser(description='manual to this script')
-parser.add_argument("--sc_data", type=str, default="dataset11_seq_141.h5ad")
-parser.add_argument("--sp_data", type=str, default='dataset11_spatial_141.h5ad')
-parser.add_argument("--document", type=str, default='dataset11_std+scale')
-parser.add_argument("--batch_size", type=int, default=2048)
-parser.add_argument("--hidden_size", type=int, default=512)
+parser.add_argument("--sc_data", type=str, default="dataset5_seq_915.h5ad")
+parser.add_argument("--sp_data", type=str, default='dataset5_spatial_915.h5ad')
+parser.add_argument("--document", type=str, default='dataset5')
+parser.add_argument("--batch_size", type=int, default=512)  # 2048
+parser.add_argument("--hidden_size", type=int, default=1024) # 512
 
-parser.add_argument("--noise_std", type=float, default=0.1)
+parser.add_argument("--noise_std", type=float, default=0.10)
 parser.add_argument("--head", type=int, default=16)
 
 args = parser.parse_args()
@@ -142,7 +142,7 @@ def diffusion_impute():
             dit_type='dit'
         )
 
-        device = torch.device('cuda:0')
+        device = torch.device('cuda:1')
         model.to(device)
 
         diffusion_step = diffusion_step
@@ -202,7 +202,7 @@ def diffusion_impute():
 
 
 # 如果可以运行 最后需要将结果输出csv
-Data =args.document # 'Dataset11_std+scale_new'
+Data =args.document # 
 outdir = 'Result/' + Data + '/'
 if not os.path.exists(outdir):
     os.mkdir(outdir)
