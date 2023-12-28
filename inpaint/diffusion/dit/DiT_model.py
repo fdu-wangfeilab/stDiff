@@ -3,14 +3,9 @@ import torch.nn as nn
 import numpy as np
 import math
 import einops
-from timm.models.vision_transformer import PatchEmbed, Mlp
-
-import sys
-pwd = '/home/lijiahao/projects/sc-diffusion/'
-sys.path.append(pwd)
-
-from Extenrnal.sc_DM.model.diffusion_model import TransformerEncoder
 from timm.models.vision_transformer import PatchEmbed, Attention, Mlp
+import sys
+
 
 class Attention2(nn.Module):
     def __init__(self, dim, num_heads=8, qkv_bias=False, attn_drop=0., proj_drop=0.):
@@ -130,7 +125,7 @@ class CrossDiTblock(nn.Module):
         super().__init__()
         
         self.norm1 = nn.LayerNorm(num_features=feature_dim, elementwise_affine=False, eps=1e-6)
-        self.attn = Attention(feature_dim, num_heads=num_heads, qkv_bias=True, **kwargs)
+        self.attn = Attention2(feature_dim, num_heads=num_heads, qkv_bias=True, **kwargs)
         
         self.norm2 = nn.LayerNorm(num_features=feature_dim, elementwise_affine=False, eps=1e-6)
         self.cross_attn = CrossAttention(feature_dim, num_heads=num_heads, qkv_bias=True, **kwargs)
@@ -162,10 +157,7 @@ class DiTblock(nn.Module):
         super().__init__()
         
         self.norm1 = nn.LayerNorm(feature_dim, elementwise_affine=False, eps=1e-6)
-        self.attn = Attention2(feature_dim, num_heads=num_heads, qkv_bias=True, **kwargs)   # cell × gene的attn 学的是cell间关系
-        
-        # 参考nlp 学基因间的关系
-        # self.attn = Attention(feature_dim, num_heads=num_heads, qkv_bias=True, **kwargs)
+        self.attn = Attention2(feature_dim, num_heads=num_heads, qkv_bias=True, **kwargs) 
         
         self.norm2 = nn.LayerNorm(feature_dim, elementwise_affine=False, eps=1e-6)
         approx_gelu = lambda: nn.GELU()
@@ -186,9 +178,6 @@ class DiTblock(nn.Module):
         # mlp blk 采用 ViT 中实现的版本
         x = x + gate_mlp * self.mlp(modulate(self.norm2(x), shift_mlp, scale_mlp))
         return x
-
-
-
 
 
 class FinalLayer(nn.Module):
@@ -218,92 +207,7 @@ class FinalLayer(nn.Module):
 BaseBlock = {'dit':DiTblock,
              'cross_dit':CrossDiTblock}
 
-class DiT(nn.Module):
-    def __init__(self,
-                 input_size,
-                 hidden_size,
-                 depth,
-                 dit_type,
-                 num_heads,
-                 classes,
-                 mlp_ratio=4.0,
-                 **kwargs) -> None:
-        super().__init__()
-        
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.depth = depth
-        self.num_heads = num_heads
-        self.classes = classes
-        self.mlp_ratio = mlp_ratio
-        self.dit_type = dit_type
-        
-        self.in_layer = nn.Sequential(
-            nn.Linear(input_size, hidden_size)
-        )
-        
-        # celltype emb
-        self.condi_emb = nn.Embedding(classes, hidden_size)
-        
-        # time emb
-        self.time_emb = TimestepEmbedder(hidden_size=self.hidden_size)
-        
-        # DiT block
-        self.blks = nn.ModuleList([
-            BaseBlock[dit_type](self.hidden_size, mlp_ratio=self.mlp_ratio, num_heads=self.num_heads) for _  in range(self.depth)
-        ])
-        
-        # out layer
-        self.out_layer = FinalLayer(self.hidden_size, self.input_size)
-        self.initialize_weights()
-        
-    def initialize_weights(self):
-        # Initialize transformer layers:
-        def _basic_init(module):
-            if isinstance(module, nn.Linear):
-                # 线性层都采用 xavier 初始化
-                torch.nn.init.xavier_uniform_(module.weight)
-                if module.bias is not None:
-                    # bias 都初始化为 0 
-                    nn.init.constant_(module.bias, 0)
-        self.apply(_basic_init)
-
-        # Initialize label embedding table:
-        nn.init.normal_(self.condi_emb.weight, std=0.02)
-
-        # Initialize timestep embedding MLP:
-        nn.init.normal_(self.time_emb.mlp[0].weight, std=0.02)
-        nn.init.normal_(self.time_emb.mlp[2].weight, std=0.02)
-
-        # Zero-out adaLN modulation layers in DiT blocks:
-        if self.dit_type =='dit':
-            for block in self.blks:
-                # adaLN_modulation 其实是个 linear, 即将所有的 adaLN 进行 0 初始化？
-                nn.init.constant_(block.adaLN_modulation[-1].weight, 0)
-                nn.init.constant_(block.adaLN_modulation[-1].bias, 0)
-
-        # Zero-out output layers:
-        # 输出层的所有参数都做 0 初始化
-        nn.init.constant_(self.out_layer.adaLN_modulation[-1].weight, 0)
-        nn.init.constant_(self.out_layer.adaLN_modulation[-1].bias, 0)
-        nn.init.constant_(self.out_layer.linear.weight, 0)
-        nn.init.constant_(self.out_layer.linear.bias, 0)    
-        
-    def forward(self,x,t,y,**kwargs):
-        x.float()
-        t = self.time_emb(t)
-        # y = self.condi_emb(y)
-        # c = t + y
-        c = t
-
-
-        x = self.in_layer(x)
-        for blk in self.blks:
-            x = blk(x,c)
-        return self.out_layer(x,c)
-
-
-class DiT_Palette(nn.Module):
+class DiT_stDiff(nn.Module):
     def __init__(self,
                  input_size,
                  hidden_size,
@@ -379,7 +283,7 @@ class DiT_Palette(nn.Module):
         nn.init.constant_(self.out_layer.linear.weight, 0)
         nn.init.constant_(self.out_layer.linear.bias, 0)
 
-    def forward(self, x, t, y,**kwargs): # 去掉了z
+    def forward(self, x, t, y,**kwargs): 
         x = x.float()
         t = self.time_emb(t)
 
@@ -389,102 +293,6 @@ class DiT_Palette(nn.Module):
         # c = t
 
         x = self.in_layer(x)
-        for blk in self.blks:
-            x = blk(x, c)
-        return self.out_layer(x, c)
-
-class DiT_origin(nn.Module):
-    def __init__(self,
-                 input_size,
-                 hidden_size,
-                 depth,
-                 dit_type,
-                 num_heads,
-                 classes,
-                 mlp_ratio=4.0,
-                 **kwargs) -> None:
-        super().__init__()
-
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.depth = depth
-        self.num_heads = num_heads
-        self.classes = classes
-        self.mlp_ratio = mlp_ratio
-        self.dit_type = dit_type
-
-        self.in_layer = nn.Sequential(
-            nn.Linear(input_size, hidden_size)
-        )
-        self.cond_layer = nn.Sequential(
-            nn.Linear(input_size, hidden_size)
-        )
-
-        # celltype emb
-        self.condi_emb = nn.Embedding(classes, hidden_size)
-
-        # time emb
-        self.time_emb = TimestepEmbedder(hidden_size=self.hidden_size)
-
-        # DiT block
-        self.blks = nn.ModuleList([
-            BaseBlock[dit_type](self.hidden_size, mlp_ratio=self.mlp_ratio, num_heads=self.num_heads) for _ in
-            range(self.depth)
-        ])
-
-        # out layer
-        self.out_layer = FinalLayer(self.hidden_size, self.input_size)
-        self.initialize_weights()
-
-    def initialize_weights(self):
-        # Initialize transformer layers:
-        def _basic_init(module):
-            if isinstance(module, nn.Linear):
-                # 线性层都采用 xavier 初始化
-                torch.nn.init.xavier_uniform_(module.weight)
-                if module.bias is not None:
-                    # bias 都初始化为 0
-                    nn.init.constant_(module.bias, 0)
-
-        self.apply(_basic_init)
-
-        # Initialize label embedding table:
-        nn.init.normal_(self.condi_emb.weight, std=0.02)
-
-        # Initialize timestep embedding MLP:
-        nn.init.normal_(self.time_emb.mlp[0].weight, std=0.02)
-        nn.init.normal_(self.time_emb.mlp[2].weight, std=0.02)
-
-        # Zero-out adaLN modulation layers in DiT blocks:
-        if self.dit_type == 'dit':
-            for block in self.blks:
-                # adaLN_modulation 其实是个 linear, 即将所有的 adaLN 进行 0 初始化？
-                nn.init.constant_(block.adaLN_modulation[-1].weight, 0)
-                nn.init.constant_(block.adaLN_modulation[-1].bias, 0)
-
-        # Zero-out output layers:
-        # 输出层的所有参数都做 0 初始化
-        nn.init.constant_(self.out_layer.adaLN_modulation[-1].weight, 0)
-        nn.init.constant_(self.out_layer.adaLN_modulation[-1].bias, 0)
-        nn.init.constant_(self.out_layer.linear.weight, 0)
-        nn.init.constant_(self.out_layer.linear.bias, 0)
-
-    def forward(self, x, t, y,**kwargs): # 去掉了z
-        # x = x.float()  # (c, g, 1)
-        # y = self.cond_layer(y)
-        
-        # test
-        x = x.float().unsqueeze(-1)
-        y = self.cond_layer(y)
-        
-        t = self.time_emb(t)
-
-        
-        # z = self.condi_emb(z)
-        c = t + y
-        # c = t
-
-        # x = self.in_layer(x)
         for blk in self.blks:
             x = blk(x, c)
         return self.out_layer(x, c)

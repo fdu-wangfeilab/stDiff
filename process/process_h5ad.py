@@ -120,13 +120,12 @@ def preprocessing_rna(
     adata = batch_scale(adata, chunk_size=chunk_size)
     return adata
 
-def plot_hvg_umap(hvg_adata,color=['celltype'],path = None, save_filename=None):
+def plot_hvg_umap(hvg_adata,color=['celltype'],save_filename=None):
     sc.set_figure_params(dpi=80, figsize=(3,3)) # type: ignore
     hvg_adata = hvg_adata.copy()
     if save_filename:
-        sc.settings.figdir = path
-        # save = '.pdf'
-        save = f'{save_filename}.pdf'
+        sc.settings.figdir = save_filename
+        save = '.pdf'
     else:
         save = None
     # ideal gas equation
@@ -135,24 +134,7 @@ def plot_hvg_umap(hvg_adata,color=['celltype'],path = None, save_filename=None):
     sc.tl.pca(hvg_adata)
     sc.pp.neighbors(hvg_adata, n_pcs=30, n_neighbors=30)
     sc.tl.umap(hvg_adata, min_dist=0.1)
-    
-    print('*************************')
-    
-    # 创建一个新的Figure对象
-    # fig, ax = plt.subplots()
-    # 绘制UMAP图在指定的Figure上
-    # sc.pl.umap(hvg_adata, color=color, legend_fontsize=10, ncols=2, show=False, ax=ax)
-    # # 添加标题
-    # ax.set_title(f'{save_filename} UMAP Visualization')
-    # # 保存图形为pdf
-    # plt.savefig(save, format='pdf')
-    # # 显示图形
-    # plt.show()
-    # ***************************************
-    
-    sc.pl.umap(hvg_adata, color=color,legend_fontsize=15, ncols=2, show=None,save=save)
-
-    # plt.title(f'{save_filename} UMAP Visualization')
+    sc.pl.umap(hvg_adata, color=color,legend_fontsize=10, ncols=2, show=None,save=save, wspace = 1)
     return hvg_adata
 
 def plot_hvg_latent_umap(cpy_x):
@@ -196,8 +178,9 @@ def get_data_loader(data_ary:np.ndarray,
         cell_type_tensor = torch.from_numpy(cell_type.astype(np.float32))
         dataset = TensorDataset(data_tensor,cell_type_tensor)
         return DataLoader(
-                dataset, batch_size=batch_size, shuffle=is_shuffle, drop_last=False)
-        
+                dataset, batch_size=batch_size, shuffle=is_shuffle, drop_last=False  , generator=torch.Generator(device = 'cuda') ) #, generator=torch.Generator(device = 'cuda') 
+                
+
 def get_data_msk_loader(data_ary:np.ndarray, 
                     cell_type:np.ndarray,
                     non_zero_msk,
