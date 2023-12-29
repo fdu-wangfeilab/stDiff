@@ -8,10 +8,10 @@ import numpy as np
 import torch
 from torch import nn
 
-from Extenrnal.scvi import _CONSTANTS
-from Extenrnal.scvi.core._log_likelihood import compute_elbo
-from Extenrnal.scvi.core.data_loaders import ScviDataLoader
-from Extenrnal.scvi.core.trainers.trainer import Trainer
+from baseline.scvi import _CONSTANTS
+from baseline.scvi.core._log_likelihood import compute_elbo
+from baseline.scvi.core.data_loaders import ScviDataLoader
+from baseline.scvi.core.trainers.trainer import Trainer
 
 logger = logging.getLogger(__name__)
 

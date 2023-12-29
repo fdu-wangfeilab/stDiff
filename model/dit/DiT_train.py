@@ -23,7 +23,7 @@ def normal_train_stDiff(model,
                  num_epoch: int = 1400,
                  pred_type: str = 'noise',
                  diffusion_step: int = 1000,
-                 device=torch.device('cuda:1'),
+                 device=torch.device('cuda:0'),
                  is_tqdm: bool = True,
                  is_tune: bool = False,
                  mask = None):
@@ -36,7 +36,7 @@ def normal_train_stDiff(model,
         pred_type (str, optional): 预测的类型噪声或者 x_0. Defaults to 'noise'.
         batch_size (int, optional):  Defaults to 1024.
         diffusion_step (int, optional): 扩散步数. Defaults to 1000.
-        device (_type_, optional): Defaults to torch.device('cuda:1').
+        device (_type_, optional): Defaults to torch.device('cuda:0').
         is_class_condi (bool, optional): 是否采用condition. Defaults to False.
         is_tqdm (bool, optional): 开启进度条. Defaults to True.
         is_tune (bool, optional): 是否用 ray tune. Defaults to False.

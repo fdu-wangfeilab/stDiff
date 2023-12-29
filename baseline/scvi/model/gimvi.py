@@ -7,13 +7,13 @@ import numpy as np
 import torch
 from anndata import AnnData, read
 
-from Extenrnal.scvi import _CONSTANTS
-from Extenrnal.scvi.data import transfer_anndata_setup
-from Extenrnal.scvi.core.models import BaseModelClass, VAEMixin
-from Extenrnal.scvi.core.modules import JVAE, Classifier
-from Extenrnal.scvi.core.trainers import JVAETrainer
-from Extenrnal.scvi.core.trainers.jvae_trainer import JvaeDataLoader
-from Extenrnal.scvi.model._utils import _get_var_names_from_setup_anndata
+from baseline.scvi import _CONSTANTS
+from baseline.scvi.data import transfer_anndata_setup
+from baseline.scvi.core.models import BaseModelClass, VAEMixin
+from baseline.scvi.core.modules import JVAE, Classifier
+from baseline.scvi.core.trainers import JVAETrainer
+from baseline.scvi.core.trainers.jvae_trainer import JvaeDataLoader
+from baseline.scvi.model._utils import _get_var_names_from_setup_anndata
 
 logger = logging.getLogger(__name__)
 

@@ -31,9 +31,10 @@ import torch
 from scipy.spatial.distance import cdist
 import h5py
 warnings.filterwarnings('ignore')
+torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 from process.result_analysis import *
-from.model.dit.DiT_model import DiT_stDiff
+from model.dit.DiT_model import DiT_stDiff
 from model.dit.DiT_scheduler import NoiseScheduler
 from model.dit.DiT_train import normal_train_stDiff
 from model.sample import sample_stDiff
@@ -160,7 +161,7 @@ def Tangram_impute(annotate=None, modes='clusters', density='rna_count_based'):
             adata_seq_tmp.obs['leiden'] = CellTypeAnnotate
         tg.pp_adatas(adata_seq_tmp, adata_spatial_partial, genes=train_gene) 
 
-        device = torch.device('cuda:1')
+        device = torch.device('cuda:0')
         if modes == 'clusters':
             ad_map = tg.map_cells_to_space(adata_seq_tmp, adata_spatial_partial, device=device, mode=modes,
                                            cluster_label='leiden', density_prior=density)
@@ -268,13 +269,13 @@ if not os.path.exists(outdir):
     os.mkdir(outdir)
 
 
-SpaGE_result = SpaGE_impute() 
-SpaGE_result_pd = pd.DataFrame(SpaGE_result, columns=sp_genes)
-SpaGE_result_pd.to_csv(outdir +  '/SpaGE_impute.csv',header = 1, index = 1)
+# SpaGE_result = SpaGE_impute() 
+# SpaGE_result_pd = pd.DataFrame(SpaGE_result, columns=sp_genes)
+# SpaGE_result_pd.to_csv(outdir +  '/SpaGE_impute.csv',header = 1, index = 1)
 
-Tangram_result = Tangram_impute() 
-Tangram_result_pd = pd.DataFrame(Tangram_result, columns=sp_genes)
-Tangram_result_pd.to_csv(outdir +  '/Tangram_impute.csv',header = 1, index = 1)
+# Tangram_result = Tangram_impute() 
+# Tangram_result_pd = pd.DataFrame(Tangram_result, columns=sp_genes)
+# Tangram_result_pd.to_csv(outdir +  '/Tangram_impute.csv',header = 1, index = 1)
 
 gimVI_result = gimVI_impute() 
 gimVI_result_pd = pd.DataFrame(gimVI_result, columns=sp_genes)
@@ -492,14 +493,13 @@ class CalculateMeteics:
         impute = self.impute_count
         prefix = self.prefix
         SSIM_gene = self.SSIM(raw, impute)
-        Pearson_gene = self.PCC(raw, impute)
         Spearman_gene = self.SPCC(raw, impute)
         JS_gene = self.JS(raw, impute)
         RMSE_gene = self.RMSE(raw, impute)
 
         cluster_result = self.cluster(raw, impute)
 
-        result_gene = pd.concat([Spearman_gene, Pearson_gene, SSIM_gene, RMSE_gene, JS_gene], axis=0)
+        result_gene = pd.concat([Spearman_gene, SSIM_gene, RMSE_gene, JS_gene], axis=0)
         result_gene.T.to_csv(prefix + "_gene_Metrics.txt", sep='\t', header=1, index=1)
 
         cluster_result.to_csv(prefix + "_cluster_Metrics.txt", sep='\t', header=1, index=1)
@@ -515,8 +515,8 @@ DirFiles = os.listdir(PATH)
 
 def CalDataMetric(Data):
     print ('We are calculating the : ' + Data + '\n')
-    metrics = ['SPCC(gene)','PCC(gene)','SSIM(gene)','RMSE(gene)','JS(gene)']
-    metric = ['SPCC','PCC','SSIM','RMSE','JS']
+    metrics = ['SPCC(gene)','SSIM(gene)','RMSE(gene)','JS(gene)']
+    metric = ['SPCC','SSIM','RMSE','JS']
     impute_count_dir = PATH + Data
     impute_count = os.listdir(impute_count_dir)
     impute_count = [x for x in impute_count if x [-3:] == 'csv']

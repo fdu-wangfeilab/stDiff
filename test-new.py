@@ -38,7 +38,7 @@ from model.sample import sample_stDiff
 from process.result_analysis import clustering_metrics
 
 warnings.filterwarnings('ignore')
-
+torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 from process.data import *
 
@@ -142,7 +142,7 @@ def diffusion_impute():
             dit_type='dit'
         )
 
-        device = torch.device('cuda:1')
+        device = torch.device('cuda:0')
         model.to(device)
 
         diffusion_step = diffusion_step
@@ -409,14 +409,13 @@ class CalculateMeteics:
         impute = self.impute_count
         prefix = self.prefix
         SSIM_gene = self.SSIM(raw, impute)
-        Pearson_gene = self.PCC(raw, impute)
         Spearman_gene = self.SPCC(raw, impute)
         JS_gene = self.JS(raw, impute)
         RMSE_gene = self.RMSE(raw, impute)
 
         cluster_result = self.cluster(impute)
 
-        result_gene = pd.concat([Spearman_gene, Pearson_gene, SSIM_gene, RMSE_gene, JS_gene], axis=0)
+        result_gene = pd.concat([Spearman_gene, SSIM_gene, RMSE_gene, JS_gene], axis=0)
         result_gene.T.to_csv(prefix + "_gene_Metrics.txt", sep='\t', header=1, index=1)
 
         cluster_result.to_csv(prefix + "_cluster_Metrics.txt", sep='\t', header=1, index=1)
@@ -431,8 +430,8 @@ DirFiles = os.listdir(PATH)
 
 def CalDataMetric(Data):
     print ('We are calculating the : ' + Data + '\n')
-    metrics = ['SPCC(gene)','PCC(gene)','SSIM(gene)','RMSE(gene)','JS(gene)']
-    metric = ['SPCC','PCC','SSIM','RMSE','JS']
+    metrics = ['SPCC(gene)','SSIM(gene)','RMSE(gene)','JS(gene)']
+    metric = ['SPCC','SSIM','RMSE','JS']
     impute_count_dir = PATH + Data
     impute_count = os.listdir(impute_count_dir)
     impute_count = [x for x in impute_count if x [-3:] == 'csv']
