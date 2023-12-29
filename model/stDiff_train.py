@@ -14,7 +14,7 @@ from ray.tune.search.optuna import OptunaSearch
 import sys
 import os
 
-from .DiT_scheduler import NoiseScheduler
+from .stDiff_scheduler import NoiseScheduler
 
 
 def normal_train_stDiff(model,

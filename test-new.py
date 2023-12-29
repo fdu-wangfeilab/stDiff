@@ -31,9 +31,9 @@ import tangram as tg
 from os.path import join
 from IPython.display import display
 
-from model.dit.DiT_model import DiT_stDiff
-from model.dit.DiT_scheduler import NoiseScheduler
-from model.dit.DiT_train import normal_train_stDiff
+from model.stDiff_model import DiT_stDiff
+from model.stDiff_scheduler import NoiseScheduler
+from model.stDiff_train import normal_train_stDiff
 from model.sample import sample_stDiff
 from process.result_analysis import clustering_metrics
 
