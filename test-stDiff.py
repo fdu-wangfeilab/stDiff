@@ -50,7 +50,7 @@ parser.add_argument("--document", type=str, default='dataset5')
 parser.add_argument("--batch_size", type=int, default=512)  # 2048
 parser.add_argument("--hidden_size", type=int, default=1024) # 512
 
-parser.add_argument("--noise_std", type=float, default=0.10)
+parser.add_argument("--noise_std", type=float, default=10)
 parser.add_argument("--head", type=int, default=16)
 
 args = parser.parse_args()
