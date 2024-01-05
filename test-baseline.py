@@ -34,9 +34,6 @@ warnings.filterwarnings('ignore')
 torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 from process.result_analysis import *
-from model.dit.DiT_model import DiT_stDiff
-from model.dit.DiT_scheduler import NoiseScheduler
-from model.dit.DiT_train import normal_train_stDiff
 from model.sample import sample_stDiff
 from baseline.scvi.model import GIMVI
 from baseline.stPlus import *
@@ -269,13 +266,13 @@ if not os.path.exists(outdir):
     os.mkdir(outdir)
 
 
-# SpaGE_result = SpaGE_impute() 
-# SpaGE_result_pd = pd.DataFrame(SpaGE_result, columns=sp_genes)
-# SpaGE_result_pd.to_csv(outdir +  '/SpaGE_impute.csv',header = 1, index = 1)
+SpaGE_result = SpaGE_impute() 
+SpaGE_result_pd = pd.DataFrame(SpaGE_result, columns=sp_genes)
+SpaGE_result_pd.to_csv(outdir +  '/SpaGE_impute.csv',header = 1, index = 1)
 
-# Tangram_result = Tangram_impute() 
-# Tangram_result_pd = pd.DataFrame(Tangram_result, columns=sp_genes)
-# Tangram_result_pd.to_csv(outdir +  '/Tangram_impute.csv',header = 1, index = 1)
+Tangram_result = Tangram_impute() 
+Tangram_result_pd = pd.DataFrame(Tangram_result, columns=sp_genes)
+Tangram_result_pd.to_csv(outdir +  '/Tangram_impute.csv',header = 1, index = 1)
 
 gimVI_result = gimVI_impute() 
 gimVI_result_pd = pd.DataFrame(gimVI_result, columns=sp_genes)
