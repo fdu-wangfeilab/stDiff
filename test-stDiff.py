@@ -52,7 +52,9 @@ parser.add_argument("--hidden_size", type=int, default=1024) # 512
 
 parser.add_argument("--noise_std", type=float, default=10)
 parser.add_argument("--head", type=int, default=16)
-
+parser.add_argument("--step", type=int, default=1500)
+parser.add_argument("--epoch", type=int, default=900)
+parser.add_argument("--rand", type=int, default=0)
 args = parser.parse_args()
 
 # ******** preprocess ********
@@ -84,16 +86,16 @@ def diffusion_impute():
   
     lr = 0.00016046744893538737 
     depth = 6 
-    num_epoch = 900 
-    diffusion_step = 1500 
+    num_epoch = args.epoch
+    diffusion_step =  args.step # 1500 
     batch_size = args.batch_size 
     hidden_size = args.hidden_size 
     head = args.head
 
     raw_shared_gene = adata_spatial.var_names
-    kf = KFold(n_splits=n_splits, shuffle=True, random_state=0)  
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=args.rand)   # 0
     kf.get_n_splits(raw_shared_gene)
-    torch.manual_seed(10)
+    torch.manual_seed(10)  # 10
     idx = 1
     all_pred_res = np.zeros_like(data_spatial_array)
 
@@ -101,7 +103,14 @@ def diffusion_impute():
         print("\n===== Fold %d =====\nNumber of train genes: %d, Number of test genes: %d" % (
             idx, len(train_ind), len(test_ind)))
 
-        save_path_prefix = 'inpaint/ckpt/dit/42-fold%d.pt' % (idx)
+
+        doc =args.document # 'Dataset11_std+scale_new'
+        save_path = 'stDiff-ckpt/' + doc + '/'
+        if not os.path.exists(save_path):
+            os.mkdir(save_path)
+        save_path_prefix = save_path + 'stDiff%d.pt' % (idx)
+        
+        
         # mask
         cell_num = data_spatial_array.shape[0]
         gene_num = data_spatial_array.shape[1]

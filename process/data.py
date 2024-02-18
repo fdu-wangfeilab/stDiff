@@ -42,13 +42,13 @@ def reindex(adata, genes, chunk_size=CHUNK_SIZE):
         adata = AnnData(new_X.tocsr(), obs=adata.obs, var={'var_names':genes}) 
     return adata
 
-
-def plot_hvg_umap(hvg_adata,color=['celltype'],save_filename=None):
+def plot_hvg_umap(hvg_adata,color=['celltype'],path = None, save_filename=None):
     sc.set_figure_params(dpi=80, figsize=(3,3)) # type: ignore
     hvg_adata = hvg_adata.copy()
     if save_filename:
-        sc.settings.figdir = save_filename
-        save = '.pdf'
+        sc.settings.figdir = path
+        # save = '.pdf'
+        save = f'{save_filename}.pdf'
     else:
         save = None
     # ideal gas equation
@@ -57,7 +57,7 @@ def plot_hvg_umap(hvg_adata,color=['celltype'],save_filename=None):
     sc.tl.pca(hvg_adata)
     sc.pp.neighbors(hvg_adata, n_pcs=30, n_neighbors=30)
     sc.tl.umap(hvg_adata, min_dist=0.1)
-    sc.pl.umap(hvg_adata, color=color,legend_fontsize=10, ncols=2, show=None,save=save, wspace = 1)
+    sc.pl.umap(hvg_adata, color=color,legend_fontsize=15, ncols=2 ,show=None,save=save)
     return hvg_adata
 
 
