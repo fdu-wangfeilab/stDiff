@@ -10,3 +10,10 @@ violin/
 datasets/
 setup.py
 ckpt/
+stDiff.egg-info/
+stDiff/
+dist/
+requirements_v2.txt
+result_delete.ipynb
+demo_pypi.ipynb
+mean-std.ipynb

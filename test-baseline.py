@@ -1,40 +1,19 @@
-import anndata as ad
 import numpy as np
 import pandas as pd
 import sys
-import pickle
 import os
-import time as tm
-from functools import partial
 import scipy.stats as st
-from scipy.stats import wasserstein_distance
-import scipy.stats
 import copy
 from sklearn.model_selection import KFold
 import pandas as pd
-import multiprocessing
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 import scanpy as sc
 import warnings
-import time
-import sys
-import tangram as tg
 from os.path import join
-from IPython.display import display
-from scipy.stats import spearmanr, pearsonr
-from scipy.spatial import distance_matrix
-from sklearn.metrics import matthews_corrcoef
-from scipy import stats
-import seaborn as sns
 import torch
-from scipy.spatial.distance import cdist
-import h5py
 warnings.filterwarnings('ignore')
 torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 from process.result_analysis import *
-from model.sample import sample_stDiff
 from baseline.scvi.model import GIMVI
 from baseline.stPlus import *
 from process.data import *
@@ -44,6 +23,7 @@ parser = argparse.ArgumentParser(description='manual to this script')
 parser.add_argument("--sc_data", type=str, default="dataset5_seq_915.h5ad")
 parser.add_argument("--sp_data", type=str, default='dataset5_spatial_915.h5ad')
 parser.add_argument("--document", type=str, default='dataset5')
+parser.add_argument("--rand", type=int, default=0)
 args = parser.parse_args()
 # ******** preprocess ********
 
@@ -86,7 +66,7 @@ def SpaGE_impute():
 
 
     raw_shared_gene = np.array(adata_spatial.var_names)
-    kf = KFold(n_splits=n_splits, shuffle=True, random_state=0)
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state= args.rand)
     kf.get_n_splits(raw_shared_gene)
     torch.manual_seed(10)
     idx = 1
@@ -125,7 +105,7 @@ def Tangram_impute(annotate=None, modes='clusters', density='rna_count_based'):
 
     
     raw_shared_gene = adata_spatial.var_names
-    kf = KFold(n_splits=n_splits, shuffle=True, random_state=0)
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=args.rand)
     kf.get_n_splits(raw_shared_gene)
     torch.manual_seed(10)
     idx = 1
@@ -158,7 +138,7 @@ def Tangram_impute(annotate=None, modes='clusters', density='rna_count_based'):
             adata_seq_tmp.obs['leiden'] = CellTypeAnnotate
         tg.pp_adatas(adata_seq_tmp, adata_spatial_partial, genes=train_gene) 
 
-        device = torch.device('cuda:0')
+        device = torch.device('cuda:1')
         if modes == 'clusters':
             ad_map = tg.map_cells_to_space(adata_seq_tmp, adata_spatial_partial, device=device, mode=modes,
                                            cluster_label='leiden', density_prior=density)
@@ -195,7 +175,7 @@ def gimVI_impute():
 
     from sklearn.model_selection import KFold
     raw_shared_gene = adata_spatial2.var_names
-    kf = KFold(n_splits=n_splits, shuffle=True, random_state=0)  # shuffle = false 不设置state，就是按顺序划分
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=args.rand)  # shuffle = false 不设置state，就是按顺序划分
     kf.get_n_splits(raw_shared_gene)
     torch.manual_seed(10)
     idx = 1
@@ -239,7 +219,7 @@ def stPlus_impute():
     global sc_data, sp_data, outdir, adata_spatial
 
     raw_shared_gene = np.array(adata_spatial.var_names)
-    kf = KFold(n_splits=n_splits, shuffle=True, random_state=0)
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=args.rand)
     kf.get_n_splits(raw_shared_gene)
     torch.manual_seed(10)
     idx = 1

@@ -543,7 +543,7 @@ def cross_val(
         target_count (int): Optional. The number of cells to be filtered. Default is None.
         num_epochs (int): Optional. Number of epochs. Default is 1000.
         learning_rate (float): Optional. Learning rate for the optimizer. Default is 0.1.
-        device (str or torch.device): Optional. Default is 'cuda:0'.
+        device (str or torch.device): Optional. Default is 'cuda:1'.
         cv_mode (str): Optional. cross validation mode, 'loo' ('leave-one-out') and '10fold' supported. Default is 'loo'.
         return_gene_pred (bool): Optional. if return prediction and true spatial expression data for test gene, only applicable when 'loo' mode is on, default is False.
         density_prior (ndarray or str): Spatial density of spots, when is a string, value can be 'rna_count_based' or 'uniform', when is a ndarray, shape = (number_spots,). This array should satisfy the constraints sum() == 1. If not provided, the density term is ignored. 

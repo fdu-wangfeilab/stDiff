@@ -1,35 +1,12 @@
-import anndata as ad
 import numpy as np
 import pandas as pd
-import sys
-import pickle
 import os
-import time as tm
-from functools import partial
 import scipy.stats as st
-from scipy.stats import wasserstein_distance
-import scipy.stats
-import copy
 from sklearn.model_selection import KFold
 import pandas as pd
-import multiprocessing
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 import scanpy as sc
 import warnings
-from scipy.stats import spearmanr, pearsonr
-from scipy.spatial import distance_matrix
-from sklearn.metrics import matthews_corrcoef
-from scipy import stats
-import seaborn as sns
 import torch
-from scipy.spatial.distance import cdist
-import h5py
-import time
-import sys
-import tangram as tg
-from os.path import join
-from IPython.display import display
 
 from model.stDiff_model import DiT_stDiff
 from model.stDiff_scheduler import NoiseScheduler
@@ -151,7 +128,7 @@ def diffusion_impute():
             dit_type='dit'
         )
 
-        device = torch.device('cuda:0')
+        device = torch.device('cuda:1')
         model.to(device)
 
         diffusion_step = diffusion_step

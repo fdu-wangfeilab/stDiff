@@ -1,7 +1,6 @@
 import torch
 from tqdm import tqdm
 import numpy as np
-from collections import defaultdict
 
 
 def model_sample_stDiff(model, device, dataloader, total_sample, time, is_condi, condi_flag):
@@ -25,7 +24,7 @@ def sample_stDiff(model,
                 noise_scheduler,
                 mask = None,
                 gt = None,
-                device=torch.device('cuda:0'),
+                device=torch.device('cuda:1'),
                 num_step=1000,
                 sample_shape=(7060, 2000),
                 is_condi=False,
