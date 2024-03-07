@@ -17,6 +17,7 @@ from process.result_analysis import *
 from baseline.scvi.model import GIMVI
 from baseline.stPlus import *
 from process.data import *
+# import uniport as up
 
 import argparse
 parser = argparse.ArgumentParser(description='manual to this script')
@@ -240,6 +241,65 @@ def stPlus_impute():
     return all_pred_res
 
 
+def uniport_impute():
+    global sc_data, sp_data, adata_seq, adata_spatial
+
+
+    raw_shared_gene = np.array(adata_spatial.var_names)
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=args.rand) # 0
+    kf.get_n_splits(raw_shared_gene)
+    torch.manual_seed(10)
+    idx = 1
+    all_pred_res = np.zeros_like(adata_spatial.X)
+
+    for train_ind, test_ind in kf.split(raw_shared_gene):
+        print("\n===== Fold %d =====\nNumber of train genes: %d, Number of test genes: %d" % (
+            idx, len(train_ind), len(test_ind)))
+        train_gene = raw_shared_gene[train_ind]
+        test_gene = raw_shared_gene[test_ind]
+        
+        adata_seq_tmp = adata_seq2.copy()
+        adata_spatial_tmp = adata_spatial2.copy()
+        
+        adata_spatial_tmp.obs['domain_id'] = 0
+        adata_spatial_tmp.obs['domain_id'] = adata_spatial_tmp.obs['domain_id'].astype('category')
+        adata_spatial_tmp.obs['source'] = 'ST'
+
+        adata_seq_tmp.obs['domain_id'] = 1
+        adata_seq_tmp.obs['domain_id'] = adata_seq_tmp.obs['domain_id'].astype('category')
+        adata_seq_tmp.obs['source'] = 'RNA'
+        
+        adata_cm = adata_spatial_tmp.concatenate(adata_seq_tmp, join='inner', batch_key='domain_id')
+        print(adata_cm.obs)
+        spatial_data = adata_cm[adata_cm.obs['source']=='ST'].copy()
+        seq_data = adata_cm[adata_cm.obs['source']=='RNA'].copy()
+        
+        spatial_data_partial = spatial_data[:,train_gene].copy()
+        adata_cm = spatial_data_partial.concatenate(seq_data, join='inner', batch_key='domain_id')
+        print(adata_cm.X.shape)
+        # return
+        up.batch_scale(adata_cm)
+        up.batch_scale(spatial_data_partial)
+        up.batch_scale(seq_data)
+        
+        seq_data.X = scipy.sparse.coo_matrix(seq_data.X)
+        spatial_data_partial.X = scipy.sparse.coo_matrix(spatial_data_partial.X)
+
+        adatas = [spatial_data_partial, seq_data]
+
+        adata = up.Run(adatas=adatas, adata_cm=adata_cm, lambda_kl=5.0, model_info=False)
+
+        spatial_data_partial.X = spatial_data_partial.X.A
+
+        adata_predict = up.Run(adata_cm=spatial_data_partial, out='predict', pred_id=1)
+        model_res = pd.DataFrame(adata_predict.obsm['predict'], columns=raw_shared_gene)
+
+        all_pred_res[:, test_ind] = model_res[test_gene]
+        idx += 1
+
+    return all_pred_res
+
+
 Data = args.document
 outdir = 'Result/' + Data + '/'
 if not os.path.exists(outdir):
@@ -262,6 +322,10 @@ gimVI_result_pd.to_csv(outdir +  '/gimVI_impute.csv',header = 1, index = 1)
 stPlus_result = stPlus_impute() 
 stPlus_result_pd = pd.DataFrame(stPlus_result, columns=sp_genes)
 stPlus_result_pd.to_csv(outdir +  '/stPlus_impute.csv',header = 1, index = 1)
+
+uniport_result = uniport_impute()
+uniport_result_pd = pd.DataFrame(uniport_result, columns=sp_genes)
+uniport_result_pd.to_csv(outdir +  '/uniport_impute.csv',header = 1, index = 1)
 
 #******** metrics ********
 
