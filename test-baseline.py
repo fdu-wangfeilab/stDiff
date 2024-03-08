@@ -17,7 +17,7 @@ from process.result_analysis import *
 from baseline.scvi.model import GIMVI
 from baseline.stPlus import *
 from process.data import *
-# import uniport as up
+import uniport as up
 
 import argparse
 parser = argparse.ArgumentParser(description='manual to this script')
