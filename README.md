@@ -13,16 +13,19 @@ if gene num > 512 and num < 1024, batchsize = 512, hiddensize = 1024; \
 if gene num > 1024 and num < 2048, batchsize = 512, hiddensize = 2048. 
 
 ### baseline
-The specific parameter settings follow those in the [Spatial Benchamark](https://github.com/QuKunLab/SpatialBenchmarking), and the baseline code is adapted from Spatial Benchmark, whose parameter settings also follow the default repositories of their respective models.
-The code for uniport is referenced in the example on its official website [Impute genes for MERFISH](https://uniport.readthedocs.io/en/latest/examples/MERFISH/MERFISH_impute.html).
+The specific parameter settings follow those in the [Spatial Benchamark](https://github.com/QuKunLab/SpatialBenchmarking), and the baseline code is adapted from Spatial Benchmark, whose parameter settings also follow the default repositories of their respective models. \
+The code for uniport is referenced in the example on its official website [Impute genes for MERFISH](https://uniport.readthedocs.io/en/latest/examples/MERFISH/MERFISH_impute.html). \
+The code for SpatialScope is referenced in [SpatialScope for imputation](https://github.com/YangLabHKUST/SpatialScope/blob/master/demos/Mouse-MOp-MERFISH.ipynb). \
 
 
 ## How to run
+### datasets
+https://zenodo.org/records/10613236?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6IjI5NDk0ZWE2LWMxZWEtNGU5ZS05ODQ1LTAyZTU5ZThhOTQ4NiIsImRhdGEiOnt9LCJyYW5kb20iOiJhODEzZjZhMDkxOTIwMjk5Y2I1ZjVkYzNmNWUwNjI0NyJ9.KX2t2EqEFatcx7PfIf_gkjmMkBjhknThlgJC3tuZOotwcDLwah8nqMvfy3uqmmiTariWNS3PLkZHjdIyzmqZPQ
 ### ckpt
-Five sets of cross-validated checkpoints(random_state = 0) for all datasets have been uploaded to https://drive.google.com/file/d/1oOSBm1cP0J5jYgiH3HNrgs1EDJS53YRR/view?usp=drive_link.
+Five sets of cross-validated checkpoints(random_state = 0) for all datasets have been uploaded to https://drive.google.com/drive/folders/1Qe1npltWkCuSZFBBG26cx7PUiM8K1Ghe?usp=sharing.
 ### environment
 ```bash
-conda env create -f environment.yml
+conda create -n stDiff python=3.6
 conda activate stDiff
 pip install -r requirements.txt
 ```
@@ -31,11 +34,12 @@ or
 pip install stDiff-sc
 ```
 ### data preprocess
-The datasets 2-16 in the experiment were all from the paper [Benchmarking spatial and single-cell transcriptomics integration methods for transcript distribution prediction and cell type](https://www.nature.com/articles/s41592-022-01480-9). The raw data were initially processed in 'process/data_process.py' to convert the txt file to h5ad, and only the genes shared by both ST and scRNA-seq were retained.
+The datasets 2-16 in the experiment were all from the paper [Benchmarking spatial and single-cell transcriptomics integration methods for transcript distribution prediction and cell type](https://www.nature.com/articles/s41592-022-01480-9). The raw data were initially processed in 'process/data_process.py' to convert the txt file to h5ad, and only the genes shared by both ST and scRNA-seq were retained. \
 
 ### run
 test-stDiff for stDiff \
-test-baseline for baselines 
+test-baseline for baselines \
+test-spscope for SpatialScope
 
 ```python
 from model.stDiff_model import DiT_stDiff

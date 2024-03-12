@@ -78,17 +78,13 @@ def get_data_loader(data_ary:np.ndarray,
 
 def scale(adata):
     scaler = MaxAbsScaler()
-    # 对adata.X按行进行归一化
     normalized_data = scaler.fit_transform(adata.X.T).T
-
-    # 更新归一化后的数据到adata.X
     adata.X = normalized_data
     return adata
 
 
 def data_augment(adata: AnnData, fixed: bool, noise_std):
    
-    # 定义增强参数，例如噪声的标准差
     noise_stddev = noise_std
     augmented_adata = adata.copy()
     gene_expression = adata.X
@@ -96,7 +92,6 @@ def data_augment(adata: AnnData, fixed: bool, noise_std):
     if fixed: 
         augmented_adata.X = augmented_adata.X + np.full(gene_expression.shape, noise_stddev)
     else:
-        # 对每个基因的表达值引入随机噪声
         augmented_adata.X = augmented_adata.X + np.abs(np.random.normal(0, noise_stddev, gene_expression.shape))   
     
     merge_adata = adata.concatenate(augmented_adata, join='outer')

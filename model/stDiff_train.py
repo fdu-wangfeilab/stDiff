@@ -22,20 +22,20 @@ def normal_train_stDiff(model,
                  is_tqdm: bool = True,
                  is_tune: bool = False,
                  mask = None):
-    """通用训练函数
+    """
 
     Args:
         lr (float):
-        momentum (float): 动量
-        max_iteration (int, optional): 训练的 iteration. Defaults to 30000.
-        pred_type (str, optional): 预测的类型噪声或者 x_0. Defaults to 'noise'.
+        momentum (float): 
+        max_iteration (int, optional): train iteration. Defaults to 30000.
+        pred_type (str, optional): noise or x_0. Defaults to 'noise'.
         batch_size (int, optional):  Defaults to 1024.
-        diffusion_step (int, optional): 扩散步数. Defaults to 1000.
+        diffusion_step (int, optional): timestep. Defaults to 1000.
         device (_type_, optional): Defaults to torch.device('cuda:1').
-        is_class_condi (bool, optional): 是否采用condition. Defaults to False.
-        is_tqdm (bool, optional): 开启进度条. Defaults to True.
-        is_tune (bool, optional): 是否用 ray tune. Defaults to False.
-        condi_drop_rate (float, optional): 是否采用 classifier free guidance 设置 drop rate. Defaults to 0..
+        is_class_condi (bool, optional): condition. Defaults to False.
+        is_tqdm (bool, optional): tqdm. Defaults to True.
+        is_tune (bool, optional):  ray tune. Defaults to False.
+        condi_drop_rate (float, optional):  classifier free guidance  drop rate. Defaults to 0..
 
     Raises:
         NotImplementedError: _description_
@@ -60,7 +60,7 @@ def normal_train_stDiff(model,
 
     for epoch in t_epoch:
         epoch_loss = 0.
-        for i, (x, x_cond) in enumerate(dataloader): # 去掉了, celltype
+        for i, (x, x_cond) in enumerate(dataloader): 
             x, x_cond = x.float().to(device), x_cond.float().to(device)
             # celltype = celltype.to(device)
 
@@ -74,7 +74,7 @@ def normal_train_stDiff(model,
             mask = torch.tensor(mask).to(device)
             x_noisy = x_t * (1 - mask) + x * mask
 
-            noise_pred = model(x_noisy, t=timesteps.to(device), y=x_cond) # 去掉了, z=celltype
+            noise_pred = model(x_noisy, t=timesteps.to(device), y=x_cond) 
             # loss = criterion(noise_pred, noise)
 
             loss = criterion(noise*(1-mask), noise_pred*(1-mask))

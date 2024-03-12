@@ -16,7 +16,6 @@ sc.pp.filter_cells(adata_spatial, min_genes=1)
 adata_seq = reindex(adata_seq, adata_spatial.var_names)
 sc.pp.filter_genes(adata_seq, min_cells=1)
 sc.pp.filter_cells(adata_seq, min_genes=1)
-# 要求基因至少在 min cell 中表达
 # sc.pp.filter_genes(adata_spatial, min_cells=1)
 
 adata_seq.write('datasets/sc/dataset3_seq_170.h5ad')
