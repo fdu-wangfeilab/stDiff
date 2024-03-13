@@ -218,7 +218,7 @@ class DiT_stDiff(nn.Module):
         # Zero-out adaLN modulation layers in DiT blocks:
         if self.dit_type == 'dit':
             for block in self.blks:
-                # adaLN_modulation , adaLN  0 initial？
+                # adaLN_modulation , adaLN  0 initial
                 nn.init.constant_(block.adaLN_modulation[-1].weight, 0)
                 nn.init.constant_(block.adaLN_modulation[-1].bias, 0)
 
