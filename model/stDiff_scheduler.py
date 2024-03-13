@@ -66,7 +66,9 @@ class NoiseScheduler():
         self.posterior_mean_coef2 = (1. - self.alphas_cumprod_prev) * torch.sqrt(self.alphas) / (1. - self.alphas_cumprod)
 
     def reconstruct_x0(self, x_t, t, noise):
-       
+        """ Get x0 from xt, noise.
+        """        
+        
         s1 = self.sqrt_inv_alphas_cumprod[t]
         s2 = self.sqrt_inv_alphas_cumprod_minus_one[t]
         s1 = s1.reshape(-1, 1).to(x_t.device)
@@ -76,6 +78,8 @@ class NoiseScheduler():
         return torch.clamp(x0,min=-1,max=1)
 
     def q_posterior(self, x_0, x_t, t):
+        """x_t-1  mean  as part of Reparameteriation
+        """        
         
         s1 = self.posterior_mean_coef1[t]
         s2 = self.posterior_mean_coef2[t]
@@ -101,10 +105,18 @@ class NoiseScheduler():
              timestep, 
              sample,
              model_pred_type: str='noise'):
-        
+        """ reverse diffusioin
+
+        Args:
+            model_output (_type_): noise
+            timestep (_type_): _t
+            sample (_type_): x_t
+            model_pred_type (str, optional): _description_. Defaults to 'noise'.
+
+        Returns:
+            x_t-1, noise
+        """        
         t = timestep
-        
-        
         
         if model_pred_type=='noise':
             pred_original_sample = self.reconstruct_x0(sample, t, model_output)
@@ -113,7 +125,7 @@ class NoiseScheduler():
         else:
             raise NotImplementedError()
             
-        pred_prev_sample = self.q_posterior(pred_original_sample, sample, t)  
+        pred_prev_sample = self.q_posterior(pred_original_sample, sample, t)  # x_t-1 mean
         
         variance = 0
         if t > 0:
@@ -122,7 +134,7 @@ class NoiseScheduler():
             variance = (self.get_variance(t) ** 0.5) * noise
 
         
-        pred_prev_sample = pred_prev_sample + variance  # x_t-1
+        pred_prev_sample = pred_prev_sample + variance  # x_t-1 Reparameteriation
         
         return pred_prev_sample  ,pred_original_sample  
 

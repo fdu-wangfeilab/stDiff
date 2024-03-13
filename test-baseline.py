@@ -28,15 +28,12 @@ parser.add_argument("--rand", type=int, default=0)
 args = parser.parse_args()
 # ******** preprocess ********
 
-
-# 过滤过的原始数据
-n_splits = 5 # 交叉验证组数
+n_splits = 5 
 adata_spatial = sc.read_h5ad('datasets/sp/' + args.sp_data)
 adata_seq = sc.read_h5ad('datasets/sc/' + args.sc_data)
 
-# 标准预处理
 adata_seq2 = adata_seq.copy()
-# tangram用
+# tangram
 adata_seq3 =  adata_seq2.copy()
 sc.pp.normalize_total(adata_seq2, target_sum=1e4)
 sc.pp.log1p(adata_seq2)
@@ -51,7 +48,7 @@ sp_genes = np.array(adata_spatial.var_names)
 sp_data = pd.DataFrame(data=data_spatial_array, columns=sp_genes)
 sc_data = pd.DataFrame(data=data_seq_array, columns=sp_genes)
 
-# ****对比方法****
+# ****baseline****
 
 def SpaGE_impute():
     '''

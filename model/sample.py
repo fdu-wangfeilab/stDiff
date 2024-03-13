@@ -32,6 +32,26 @@ def sample_stDiff(model,
                 model_pred_type: str = 'noise',
                 is_classifier_guidance=False,
                 omega=0.1):
+    """_summary_
+
+    Args:
+        model (_type_): denoising model
+        dataloader (_type_): _description_
+        noise_scheduler (_type_): _description_
+        mask (_type_, optional): _mask_. Defaults to None.
+        gt (_type_, optional): _used to get the part of the data that is not missing_. Defaults to None.
+        device (_type_, optional): _device_. Defaults to torch.device('cuda:1').
+        num_step (int, optional): _timestep_. Defaults to 1000.
+        sample_shape (tuple, optional): _sample shape_. Defaults to (7060, 2000).
+        is_condi (bool, optional): _whether to use condition_. Defaults to False.
+        sample_intermediate (int, optional): _early termination_. Defaults to 200.
+        model_pred_type (str, optional): _preditc noise or x0_. Defaults to 'noise'.
+        is_classifier_guidance (bool, optional): whether to use cfg. Defaults to False.
+        omega (float, optional): classifier guidance hyperparameter. Defaults to 0.1.
+
+    Returns:
+        _type_: recon_x
+    """
     model.eval()
     x_t = torch.randn(sample_shape[0], sample_shape[1]).to(device)
     timesteps = list(range(num_step))[::-1]  # 倒序

@@ -108,11 +108,11 @@ class DiTblock(nn.Module):
         )
     
     def forward(self,x,c):
-        # 将 condition 投影到 6 * hiddensize 之后沿列切成 6 份
+        # Project condition to 6 * hiddensize and then slice it into 6 parts along the column.
         shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = self.adaLN_modulation(c).chunk(6, dim=1)
         # attention blk
         x = x + gate_msa * self.attn(modulate(self.norm1(x), shift_msa, scale_msa))
-        # mlp blk 采用 ViT 中实现的版本
+        # mlp
         x = x + gate_mlp * self.mlp(modulate(self.norm2(x), shift_mlp, scale_mlp))
         return x
 
@@ -123,21 +123,20 @@ class FinalLayer(nn.Module):
     """
     def __init__(self, hidden_size, out_size):
         super().__init__()
-        # 为什么最后要关掉 elementwise_affine ?
         self.norm_final = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
-        # 投影成输出的 patch 形状
+        # Projected into output shape
         self.linear = nn.Linear(hidden_size, out_size, bias=True)
-        # 最后也是需要 shift scale
+        # shift scale
         self.adaLN_modulation = nn.Sequential(
             nn.SiLU(),
             nn.Linear(hidden_size, 2 * hidden_size, bias=True)
         )
 
     def forward(self, x, c):
-        # 先做 shift scale
+        # shift scale
         shift, scale = self.adaLN_modulation(c).chunk(2, dim=1)
         x = modulate(self.norm_final(x), shift, scale)
-        # 最后投影到输出维度
+        # projection
         x = self.linear(x)
         return x      
 
@@ -153,6 +152,17 @@ class DiT_stDiff(nn.Module):
                  classes,
                  mlp_ratio=4.0,
                  **kwargs) -> None:
+        """ denoising model
+
+        Args:
+            input_size (_type_): input dim
+            hidden_size (_type_): scale input to hidden dim
+            depth (_type_): dit block num
+            dit_type (_type_): which type block to use
+            num_heads (_type_): transformer head num
+            classes (_type_): class num
+            mlp_ratio (float, optional): _description_. Defaults to 4.0.
+        """        
         super().__init__()
 
         self.input_size = input_size

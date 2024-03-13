@@ -25,17 +25,12 @@ def normal_train_stDiff(model,
     """
 
     Args:
-        lr (float):
-        momentum (float): 
-        max_iteration (int, optional): train iteration. Defaults to 30000.
+        lr (float): learning rate 
         pred_type (str, optional): noise or x_0. Defaults to 'noise'.
-        batch_size (int, optional):  Defaults to 1024.
         diffusion_step (int, optional): timestep. Defaults to 1000.
         device (_type_, optional): Defaults to torch.device('cuda:1').
-        is_class_condi (bool, optional): condition. Defaults to False.
         is_tqdm (bool, optional): tqdm. Defaults to True.
         is_tune (bool, optional):  ray tune. Defaults to False.
-        condi_drop_rate (float, optional):  classifier free guidance  drop rate. Defaults to 0..
 
     Raises:
         NotImplementedError: _description_

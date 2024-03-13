@@ -36,8 +36,8 @@ args = parser.parse_args()
 
 # ******** preprocess ********
 
-# 过滤过的原始数据
-n_splits = 5 # 交叉验证组数
+# raw data 
+n_splits = 5 # cross-validation sets number
 adata_spatial = sc.read_h5ad('datasets/sp/' + args.sp_data)
 adata_seq = sc.read_h5ad('datasets/sc/'+ args.sc_data)
 
@@ -58,7 +58,7 @@ sp_genes = np.array(adata_spatial.var_names)
 sp_data = pd.DataFrame(data=data_spatial_array, columns=sp_genes)
 sc_data = pd.DataFrame(data=data_seq_array, columns=sp_genes)
 
-# ****对比方法****
+
 def diffusion_impute():
   
     lr = 0.00016046744893538737 
@@ -187,7 +187,7 @@ def diffusion_impute():
     return impu
 
 
-# 如果可以运行 最后需要将结果输出csv
+
 Data =args.document # 
 outdir = 'Result/' + Data + '/'
 if not os.path.exists(outdir):

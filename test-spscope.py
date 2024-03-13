@@ -1,4 +1,3 @@
-# 运行spscope方法 在自己的数据集上
 import numpy as np
 import pandas as pd
 import os
@@ -34,13 +33,10 @@ parser.add_argument("--rand", type=int, default=0)
 args = parser.parse_args()
 # ******** preprocess ********
 
-
-# 过滤过的原始数据
-n_splits = 5 # 交叉验证组数
+n_splits = 5 
 adata_spatial = sc.read_h5ad('datasets/sp/' + args.sp_data)
 adata_seq = sc.read_h5ad('datasets/sc/' + args.sc_data)
 
-# 标准预处理
 adata_seq2 = adata_seq.copy()
 
 # tangram
@@ -87,8 +83,6 @@ a = pd.read_csv(csv_path)
 data_spatial_array_spscope = data_spatial_array
 
 
-# ****对比方法****
-
 def spscope_impute():
 
     
@@ -131,7 +125,6 @@ def spscope_impute():
     return all_pred_res
     
 
-# 如果可以运行 最后需要将结果输出csv
 Data = args.document
 outdir = 'Result/spscope/' + Data + '/'
 if not os.path.exists(outdir):
